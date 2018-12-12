@@ -1,3 +1,5 @@
+import re
+
 from django.db.models import QuerySet
 from xpinyin import Pinyin
 
@@ -20,7 +22,11 @@ class CommonUtil:
 
     @staticmethod
     def cn_to_pinyin(cn_words):
-        return Pinyin().get_pinyin(cn_words).replace('-','').lower()
+        pinyin = Pinyin().get_pinyin(cn_words).replace('-','').lower()
+        pattern = re.compile('\\w*')
+        result1 = pattern.findall(pinyin)
+        result1 = ''.join(result1)
+        return (result1.replace("_",''))
 
 
 

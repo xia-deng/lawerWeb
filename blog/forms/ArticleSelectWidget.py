@@ -3,7 +3,7 @@ from math import ceil
 from django import forms
 from django.utils.safestring import mark_safe
 
-from blog.models2 import Label
+from blog.models import Label
 from lawerWeb.settings import STATICFILES_DIRS, SELECT_INPUT_COLUMN_NUMBER
 from utils.commonUtil import CommonUtil
 
@@ -39,7 +39,7 @@ class ArticleLabelSelectWidgt(forms.Widget):
         print(allNames)
         number = SELECT_INPUT_COLUMN_NUMBER
         html = '<table cellpadding="0" style="border:0;" cellspacing="0" class="tablist"><tr><td colspan=\"%s\">' \
-               '<input class="txtValue vTextField" maxlength="256" required type="text" id=\"%s\" name=\"%s\" value=\"%s\" /></td></tr>' % (
+               '<input class="text-field admintextinputwidget form-control txtValue" maxlength="256" required type="text" id=\"%s\" name=\"%s\" value=\"%s\" /></td></tr>' % (
                number, 'id_' + name, name, ','.join(names) + ',' if len(names) > 0 else '')
 
         tempHtml = html

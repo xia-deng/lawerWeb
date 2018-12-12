@@ -4,7 +4,7 @@ from django.contrib import admin
 
 # Register your models here.
 from blog.forms.ArticleForms import ArticleForm
-from blog.models2 import Article, Column, Label
+from blog.models import Article, Column, Label
 from lawerWeb.settings import PER_PAGE_SHOW  # , STATIC_PAGE
 
 

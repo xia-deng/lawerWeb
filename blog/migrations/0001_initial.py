@@ -34,7 +34,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('title', models.CharField(max_length=128, verbose_name='标题')),
-                ('slug', models.CharField(db_index=True, editable=False, max_length=128, verbose_name='文章地址')),
+                ('slug', models.CharField(db_index=True, editable=False, max_length=128, verbose_name='文章索引')),
                 ('content', froala_editor.fields.FroalaField(verbose_name='内容')),
                 ('publish_status', models.CharField(choices=[('d', '丢弃'), ('p', '发布'), ('w', '草稿')], max_length=1, verbose_name='状态')),
                 ('pub_date', models.DateTimeField(auto_now_add=True, verbose_name='发表时间')),
@@ -51,7 +51,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=56, verbose_name='栏目名称')),
-                ('slug', models.CharField(db_index=True, max_length=128, verbose_name='栏目地址')),
+                ('slug', models.CharField(db_index=True, max_length=128, verbose_name='栏目索引')),
                 ('intro', models.CharField(default='', max_length=512, verbose_name='栏目简介')),
                 ('created_time', models.DateTimeField(auto_now_add=True, verbose_name='创建时间')),
             ],
@@ -139,7 +139,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=56, verbose_name='主题名称')),
-                ('slug', models.CharField(db_index=True, max_length=128, verbose_name='主题地址')),
+                ('slug', models.CharField(db_index=True, max_length=128, verbose_name='主题索引')),
                 ('intro', models.CharField(default='', max_length=512, verbose_name='主题简介')),
                 ('created_time', models.DateTimeField(auto_now_add=True, verbose_name='创建时间')),
             ],

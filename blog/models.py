@@ -1,130 +1,142 @@
+from django.contrib.auth.models import User
 from django.db import models
-from django.contrib.auth.models import Group
-from django.conf import settings
-from django.utils.encoding import python_2_unicode_compatible
+# Create your models here.
+from django.db.models.fields import CharField
+from django.utils.html import format_html
 
-AUTH_USER_MODEL = getattr(settings, 'AUTH_USER_MODEL', 'auth.User')
+from blog import STATUS_CHOICES, Column_CN, Lable_CN, Article_CN
+from froala_editor.fields import FroalaField
+from lawerWeb.settings import IS_POLL_NUM_EDIT, IS_COMMENT_NUM_EDIT
+from utils.file import FileUtil
 
-SERVER_STATUS = (
-    (0, u"Normal"),
-    (1, u"Down"),
-    (2, u"No Connect"),
-    (3, u"Error"),
-)
-SERVICE_TYPES = (
-    ('moniter', u"Moniter"),
-    ('lvs', u"LVS"),
-    ('db', u"Database"),
-    ('analysis', u"Analysis"),
-    ('admin', u"Admin"),
-    ('storge', u"Storge"),
-    ('web', u"WEB"),
-    ('email', u"Email"),
-    ('mix', u"Mix"),
-)
 
-@python_2_unicode_compatible
-class IDC(models.Model):
-    name = models.CharField(max_length=64)
-    description = models.TextField()
-
-    contact = models.CharField(max_length=32)
-    telphone = models.CharField(max_length=32)
-    address = models.CharField(max_length=128)
-    customer_id = models.CharField(max_length=128)
-    groups = models.ManyToManyField(Group)  # many
-
-    create_time = models.DateField(auto_now=True)
+class Column(models.Model):
+    name = models.CharField("栏目名称", max_length=56)
+    # db_index创建索引字段
+    slug = models.CharField("栏目索引", max_length=128, db_index=True)
+    intro = models.CharField("栏目简介", default='', max_length=512)
+    created_time = models.DateTimeField("创建时间", auto_now_add=True)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        verbose_name = u"IDC"
-        verbose_name_plural = verbose_name
+        verbose_name = Column_CN
+        verbose_name_plural = Column_CN
+        ordering = ["created_time"]
 
 
-@python_2_unicode_compatible
-class Host(models.Model):
-    idc = models.ForeignKey(IDC, on_delete=models.CASCADE)
-    name = models.CharField(max_length=64)
-    nagios_name = models.CharField(u"Nagios Host ID", max_length=64, blank=True, null=True)
-    ip = models.GenericIPAddressField(blank=True, null=True)
-    internal_ip = models.GenericIPAddressField(blank=True, null=True)
-    user = models.CharField(max_length=64)
-    password = models.CharField(max_length=128)
-    ssh_port = models.IntegerField(blank=True, null=True)
-    status = models.SmallIntegerField(choices=SERVER_STATUS)
-
-    brand = models.CharField(max_length=64, choices=[(i, i) for i in (u"DELL", u"HP", u"Other")])
-    model = models.CharField(max_length=64)
-    cpu = models.CharField(max_length=64)
-    core_num = models.SmallIntegerField(choices=[(i * 2, "%s Cores" % (i * 2)) for i in range(1, 15)])
-    hard_disk = models.IntegerField()
-    memory = models.IntegerField()
-
-    system = models.CharField(u"System OS", max_length=32, choices=[(i, i) for i in (u"CentOS", u"FreeBSD", u"Ubuntu")])
-    system_version = models.CharField(max_length=32)
-    system_arch = models.CharField(max_length=32, choices=[(i, i) for i in (u"x86_64", u"i386")])
-
-    create_time = models.DateField()
-    guarantee_date = models.DateField()
-    service_type = models.CharField(max_length=32, choices=SERVICE_TYPES)
-    description = models.TextField()
-
-    administrator = models.ForeignKey(AUTH_USER_MODEL, verbose_name="Admin", on_delete=models.CASCADE)
+class Label(models.Model):
+    name = models.CharField("主题名称", max_length=56)
+    # db_index创建索引字段
+    slug = models.CharField("主题索引", max_length=128, db_index=True)
+    intro = models.CharField("主题简介", default='', max_length=512)
+    created_time = models.DateTimeField("创建时间", auto_now_add=True)
 
     def __str__(self):
         return self.name
 
     class Meta:
-        verbose_name = u"Host"
-        verbose_name_plural = verbose_name
+        verbose_name = Lable_CN
+        verbose_name_plural = Lable_CN
+        ordering = ["created_time"]
 
 
-@python_2_unicode_compatible
-class MaintainLog(models.Model):
-    host = models.ForeignKey(Host, on_delete=models.CASCADE)
-    maintain_type = models.CharField(max_length=32)
-    hard_type = models.CharField(max_length=16)
-    time = models.DateTimeField()
-    operator = models.CharField(max_length=16)
-    note = models.TextField()
+# 扩展Article的manager
+class ArticleManager(models.Manager):
+    # 根据文章类型来查询文章
+    def query_by_column(self, column_id):
+        query = self.get_queryset().filter(column_id=column_id)
+        return query
+
+    # 根据用户来获取和用户相关的文章
+    def query_by_user(self, user_id):
+        query = User.objects.get(id=user_id)
+        article_list = query.article_set.all()
+        return article_list
+
+    # 根据点赞数来排行文章列表
+    def query_by_polls(self):
+        query = self.get_queryset().order_by('poll_num')
+        return query
+
+    # 根据发表时间来排行文章列表
+    def query_by_time(self):
+        query = self.get_queryset().order_by('-pub_date')
+        return query
+
+    # 根据文章标题或内容查询文章
+    def query_by_keyword(self, keyword):
+        query = (self.get_queryset().filter(title__contains=keyword) |
+                 self.get_queryset().filter(content__contains=keyword)).distinct()
+        return query
+
+
+class Article(models.Model):
+    column = models.ForeignKey(Column, on_delete=models.CASCADE, verbose_name=Column_CN)
+    label = models.ManyToManyField(Label, verbose_name=Lable_CN, blank=True,null=True)
+    title = models.CharField("标题", max_length=128)
+    slug = models.CharField("文章索引", max_length=128, db_index=True, editable=False)
+
+    author = models.ForeignKey('auth.User', blank=True, null=True, verbose_name="作者", on_delete=models.CASCADE)
+    # content = UEditorField('内容', height=300, width=800,
+    #                        default=u'', blank=True, imagePath="uploads/images/",
+    #                        toolbars='besttome', filePath='uploads/files/', upload_settings={"imageMaxSize":2048}, settings={}, command=None,)
+    content = FroalaField('内容', theme='gray', options={'toolbarInline': False, 'height': 500})
+    publish_status = CharField('状态', max_length=1, choices=STATUS_CHOICES)
+
+    pub_date = models.DateTimeField('发表时间', auto_now_add=True, editable=True)
+    update_date = models.DateTimeField('更新时间', auto_now=True, null=True)
+    #poll = models.ForeignKey('Poll', verbose_name='点赞数', editable=IS_POLL_NUM_EDIT, on_delete=models.CASCADE)
+    #comment = models.ForeignKey('Comment', verbose_name='评论数', editable=IS_COMMENT_NUM_EDIT, on_delete=models.CASCADE)
+
+    # 定义发布状态的显示方式
+    def publishStatus(self):
+        html = ""
+        if (self.publish_status == 'p'):
+            html = '<img src="/static/admin/img/icon-yes.svg" alt="True"/>发布'
+        elif (self.publish_status == 'd'):
+            html = '<img src="/static/admin/img/icon-no.svg" alt="True"/>丢弃'
+        else:
+            html = "<i class='changelink'>草稿</i>"
+        return format_html(html)
+
+    publishStatus.short_description = '状态'
+    publishStatus.admin_order_field = 'publish_status'
+    status = property(publishStatus)
+
+    def articleContent(self):
+        return FileUtil.readFileLines(self.content)
+
+    # content = property(articleContent)
+
 
     def __str__(self):
-        return '%s maintain-log [%s] %s %s' % (self.host.name, self.time.strftime('%Y-%m-%d %H:%M:%S'),
-                                               self.maintain_type, self.hard_type)
+        return self.title
 
     class Meta:
-        verbose_name = u"Maintain Log"
-        verbose_name_plural = verbose_name
+        verbose_name = Article_CN
+        verbose_name_plural = Article_CN
+
+    # 申明自定义的Manger管理器
+    objects = ArticleManager()
 
 
-@python_2_unicode_compatible
-class HostGroup(models.Model):
-
-    name = models.CharField(max_length=32)
-    description = models.TextField()
-    hosts = models.ManyToManyField(
-        Host, verbose_name=u'Hosts', blank=True, related_name='groups')
-
-    class Meta:
-        verbose_name = u"Host Group"
-        verbose_name_plural = verbose_name
+# 文章评论模块
+class Comment(models.Model):
+    author = models.CharField(null=True, max_length=128)
+    content = models.CharField(max_length=500, null=False)
+    pub_date = models.DateTimeField(auto_now_add=True, editable=False)
+    article = models.ForeignKey(Article, verbose_name="文章", on_delete=models.CASCADE)
+    #poll = models.ForeignKey('Poll', verbose_name="点赞", on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.name
+        return self.content
 
 
-@python_2_unicode_compatible
-class AccessRecord(models.Model):
-    date = models.DateField()
-    user_count = models.IntegerField()
-    view_count = models.IntegerField()
-
-    class Meta:
-        verbose_name = u"Access Record"
-        verbose_name_plural = verbose_name
-
-    def __str__(self):
-        return "%s Access Record" % self.date.strftime('%Y-%m-%d')
+# 点赞模块
+class Poll(models.Model):
+    author = models.CharField(null=True, max_length=128)
+    pub_date = models.DateTimeField(auto_now_add=True, editable=False)
+    comment = models.ForeignKey('Comment', verbose_name='评论', on_delete=models.CASCADE)
+    article = models.ForeignKey(Article, verbose_name="文章", on_delete=models.CASCADE)
