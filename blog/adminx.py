@@ -1,13 +1,10 @@
 import xadmin
 from django.http.response import HttpResponse
-from xadmin import views
 from django.utils.translation import gettext as _
-
+from xadmin import views
 # Admin.py定义
 from xadmin.plugins.actions import BaseActionView
-from xadmin.plugins.batch import BatchChangeAction
 
-from blog.admin import ArticleAdmin
 from blog.forms.ArticleForms import ArticleForm
 from blog.models import Comment, Article, Column, Label
 from lawerWeb.settings import PER_PAGE_SHOW
@@ -27,10 +24,11 @@ class MainDashboard(object):
         [
             {"type": "qbutton", "title": "Quick Start",
              "btns": [{"model": Article}]},
-            #{"type": "addform", "model": Article},
+            # {"type": "addform", "model": Article},
         ]
 
     ]
+
 
 @xadmin.sites.register(Column)
 class ColumnAdmin(object):
@@ -39,13 +37,12 @@ class ColumnAdmin(object):
     search_fields = ["name"]
     readonly_fields = ['slug']
     free_query_filter = False
-    #exclude = ['slug']
+    # exclude = ['slug']
     list_per_page = PER_PAGE_SHOW
     model_icon = 'fa fa-tags'
 
-
     def save_models(self):
-        #self.new_obj.area_company = C.objects.get(user=self.request.user)
+        # self.new_obj.area_company = C.objects.get(user=self.request.user)
         self.new_obj.slug = CommonUtil.cn_to_pinyin(self.new_obj.name)
         super().save_models()
 
@@ -55,12 +52,14 @@ class MaintainInline(object):
     extra = 1
     style = "accordion"
 
+
 class ArticleStatusPublishAction(BaseActionView):
     # 这里需要填写三个属性
     action_name = "publishArticle"  #: 相当于这个 Action 的唯一标示, 尽量用比较针对性的名字
-    description = _(u'修改%(verbose_name_plural)s状态为发布')  #: 描述, 出现在 Action 菜单中, 可以使用 ``%(verbose_name_plural)s`` 代替 Model 的名字.
-    #action_name = "delete_selected"
-    #description = _(u'Delete selected %(verbose_name_plural)s')
+    description = _(
+        u'修改%(verbose_name_plural)s状态为发布')  #: 描述, 出现在 Action 菜单中, 可以使用 ``%(verbose_name_plural)s`` 代替 Model 的名字.
+    # action_name = "delete_selected"
+    # description = _(u'Delete selected %(verbose_name_plural)s')
     model_perm = 'change'  #: 该 Action 所需权限
     icon = "fa fa-lightbulb-o"
 
@@ -68,6 +67,7 @@ class ArticleStatusPublishAction(BaseActionView):
         rows_updated = queryset.update(publish_status='p')
 
         return HttpResponse
+
 
 class ArticleStatusDropAction(BaseActionView):
     # 这里需要填写三个属性
@@ -82,6 +82,7 @@ class ArticleStatusDropAction(BaseActionView):
 
         return HttpResponse
 
+
 class ArticleStatusWriteAction(BaseActionView):
     # 这里需要填写三个属性
     action_name = "writeArticle"  #: 相当于这个 Action 的唯一标示, 尽量用比较针对性的名字
@@ -95,6 +96,7 @@ class ArticleStatusWriteAction(BaseActionView):
 
         return HttpResponse
 
+
 @xadmin.sites.register(Article)
 class ArticleAdmin(object):
     list_display = ('title', 'slug', 'author', 'pub_date', 'update_date', 'publish_status')
@@ -106,11 +108,11 @@ class ArticleAdmin(object):
     ]
     readonly_fields = ['slug']
     exclude = ['slug']
-    #inlines = [MaintainInline]
+    # inlines = [MaintainInline]
     ordering = ["pub_date", "publish_status"]
-    #list_editable = ['publish_status']
+    # list_editable = ['publish_status']
     list_per_page = PER_PAGE_SHOW
-    #actions = [BatchChangeAction, ]
+    # actions = [BatchChangeAction, ]
     model_icon = 'fa fa-book'
     form = ArticleForm
     actions = [ArticleStatusPublishAction, ArticleStatusDropAction, ArticleStatusWriteAction, ]
@@ -121,31 +123,41 @@ class ArticleAdmin(object):
     # ]
 
     """函数作用：使当前登录的用户只能看到自己权限下的文章"""
+
     def queryset(self):
         qs = query = Article.objects.all()
         if self.request.user.is_superuser:
             return qs
         return qs.filter(author=self.request.user)
 
-
     def save_models(self):
-        #self.new_obj.area_company = C.objects.get(user=self.request.user)
+        # self.new_obj.area_company = C.objects.get(user=self.request.user)
         self.new_obj.slug = CommonUtil.cn_to_pinyin(self.new_obj.title)
+        article = Article()
+        #article.content = self.new_obj.
         label_ids = self.get_label_id(self.form_obj.data["label"])
-        for lable in label_ids:
-            print(lable.id)
-        self.new_obj.label.related_set.set(label_ids)
-        super().save_models()
+        article.content = self.new_obj.content
+        article.column = self.new_obj.column
+        article.title = self.new_obj.title
+        article.author = self.new_obj.author
+        article.publish_status = self.new_obj.publish_status
+        article.save()
+        article.label.set(label_ids)
+        article.save()
+        #super().save_models()
+        #self.new_obj.label.entry_set.add(label_ids)
+        #super().save_models()
 
     def get_label_id(self, label_names):
-        label_names= label_names.replace('，', ',').replace(' ', ',');
-        label_names_list=label_names.split(',')
+        label_names = label_names.replace('，', ',').replace(' ', ',');
+        label_names_list = label_names.split(',')
+        label_ids = []
         for name in label_names_list:
-            name=name.strip()
-            if len(name)>0:
-                Label.objects.get_or_create(name=name,slug=CommonUtil.cn_to_pinyin(name))
-        qs= Label.objects.filter(name__in=label_names_list)
-        return qs
+            name = name.strip()
+            if len(name) > 0:
+                Label.objects.get_or_create(name=name, slug=CommonUtil.cn_to_pinyin(name))
+                # label_ids.append(get_Or_create_result[0].id)
+        return Label.objects.filter(name__in=label_names_list)
 
 
 class BaseSetting(object):
