@@ -5,3 +5,48 @@ ROALA_EDITOR_PLUGINS = ('align', 'char_counter', 'code_beautifier' ,'code_view',
         'entities', 'file', 'font_family', 'font_size', 'fullscreen', 'image_manager', 'image', 'inline_style',
         'line_breaker', 'link', 'lists', 'paragraph_format', 'paragraph_style', 'quick_insert', 'quote', 'save', 'table',
         'url', 'video')
+
+2.sudo pip命令不识别：
+    编辑文件～/.bashers
+
+    1 sudo vi  .bashrc
+
+    添加
+
+    1 alias sudo='sudo env PATH=$PATH'
+
+    之后
+
+    1 source ~/.bashrc
+
+3.sudo pip install xadmin2 报错：无法uninstall httplib2
+    udo pip install xadmin2 --ignore-installed httplib2即可
+
+4.对于Many-to-Many的Model，在设置属性时，
+    self.form_obj.cleaned_data["label"] = label_ids (重置cleaned_data中的label，否则无法保存label到数据库中)
+    self.new_obj.save()
+    self.new_obj.label.set(label_ids)
+
+5.重写Model.objects.create和model.save方法：
+        1、create
+            改写相应 model 的 manager：
+
+            class MyOrderManager(models.Manager):
+                def create(self, *args, **kwargs):
+                    kwargs['order_no'] = datetime.datetime.now.strftime('%Y%m%d' + seq)
+                    super(MyOrderManager, self).create(*args, **kwargs)
+
+            class Order(models.Model):
+                xxx = xxx
+                objects = MyOrderManager()
+
+        2、复写 save:
+
+            class Order(models.Model):
+                xxx = xxx
+
+                def save(self, *args, **kwargs):
+                    self.order_no = datetime.datetime.now.strftime('%Y%m%d' + seq)
+                    super(Order, self).save(*args, **kwargs)
+
+

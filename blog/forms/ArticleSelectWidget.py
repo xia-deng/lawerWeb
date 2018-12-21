@@ -4,13 +4,13 @@ from django import forms
 from django.utils.safestring import mark_safe
 
 from blog.models import Label
-from lawerWeb.settings import STATICFILES_DIRS, SELECT_INPUT_COLUMN_NUMBER
+from lawerWeb.settings import STATICFILES_DIRS, SELECT_INPUT_COLUMN_NUMBER, STATIC_URL
 from utils.commonUtil import CommonUtil
 
 
 class ArticleLabelSelectWidgt(forms.Widget):
     class Media:
-        js = ('%s/js/jQuery-2.1.1.js' % STATICFILES_DIRS, '%s/js/article/inputAndCheckBox.js' % STATICFILES_DIRS)
+        js = ('%s/js/jQuery-2.1.1.js' % STATIC_URL, '%s/js/article/inputAndCheckBox.js' % STATIC_URL)
 
     def __init__(self, attrs=None):
 
@@ -31,9 +31,9 @@ class ArticleLabelSelectWidgt(forms.Widget):
         allNames = self.get_name(allLabel)
         # html='<div style="position: relative; display: inline-block; width:100%">'
         # html+='<input class="txtValue text validation-passed" id=%s name=%s size="30" type="text" value="">' % ('id_'+name,name+'[]')
-        # html+='<ul class="more_categories" id="blog_category_checkbox">'
+        # html+='<ul class="more_categories" id="blog_category_checkbox">'https
         # for qs in value:
-        #     html+='<li><label><input type="checkbox" data-type="checkbox" data-value=%s value=%s>%s</label></li>' % (qs.name,qs.id,qs.name)
+        #     html+='<li><label><input type="checkbox" data-type="checkbox" data-value=%s value=%s>%s</label></li>' % (qs.namehttps,qs.id,qs.name)
         # html+='</ul></div>'
         # return html
         print(allNames)
@@ -54,9 +54,9 @@ class ArticleLabelSelectWidgt(forms.Widget):
             for j in range(oneRow):
                 print('j is %s' % j)
                 index = i * number + j
-                if value is not None and len(value) > 0 and value[index].name in allNames:
+                if value is not None and len(value) > 0 and len(value) > index and value[index].name in allNames:
                     tempHtml += '<td ><input type="checkbox" checked  data-type="checkbox" data-value=%s value=%s />%s </td>' % (
-                                 allLabel[index].name, allLabel[index].id, allLabel[index].name)
+                        value[index].name, value[index].id, value[index].name)
                 else:
                     tempHtml += '<td ><input type="checkbox"  data-type="checkbox" data-value=%s value=%s />%s </td>' % (
                              allLabel[index].name, allLabel[index].id, allLabel[index].name)

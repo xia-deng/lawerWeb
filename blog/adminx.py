@@ -6,7 +6,7 @@ from xadmin import views
 from xadmin.plugins.actions import BaseActionView
 
 from blog.forms.ArticleForms import ArticleForm
-from blog.models import Comment, Article, Column, Label
+from blog.models import Comment, Article, Column, Label, Poll
 from lawerWeb.settings import PER_PAGE_SHOW
 from utils.commonUtil import CommonUtil
 
@@ -40,6 +40,7 @@ class ColumnAdmin(object):
     # exclude = ['slug']
     list_per_page = PER_PAGE_SHOW
     model_icon = 'fa fa-tags'
+    reversion_enable = True
 
     def save_models(self):
         # self.new_obj.area_company = C.objects.get(user=self.request.user)
@@ -99,13 +100,30 @@ class ArticleStatusWriteAction(BaseActionView):
 
 @xadmin.sites.register(Article)
 class ArticleAdmin(object):
-    list_display = ('title', 'slug', 'author', 'pub_date', 'update_date', 'publish_status')
+
+    def comments_records(self, instance):
+        return Comment.objects.filter(article=instance.id).count()
+
+    comments_records.short_description = "评论数"
+    comments_records.allow_tags = True
+    comments_records.is_column = True
+
+    def poll_records(self, instance):
+        return Poll.objects.filter(article=instance.id).count()
+
+    poll_records.short_description = "点赞数"
+    poll_records.allow_tags = True
+    poll_records.is_column = True
+
+    list_display = ('title', 'slug', 'author', 'pub_date', 'update_date', 'read_records', 'comments_records', 'poll_records', 'publish_status')
     list_display_links = ("title",)
     free_query_filter = False
     search_fields = ["title", "slug", "author", "pub_date", "publish_status"]
     list_filter = [
         "publish_status",
     ]
+    grid_layouts = ("table", "thumbnails")
+    show_detail_fields = []
     readonly_fields = ['slug']
     exclude = ['slug']
     # inlines = [MaintainInline]
@@ -117,51 +135,66 @@ class ArticleAdmin(object):
     form = ArticleForm
     actions = [ArticleStatusPublishAction, ArticleStatusDropAction, ArticleStatusWriteAction, ]
 
+    # list_editable = (
+    #     "title", "publish_status"
+    # )
     # wizard_form_list = [
     #     ("基本信息", ("title", 'column', 'label', "author")),
     #     ("內容和状态", ('content', 'publish_status'))
     # ]
+    #style_fields = {"publish_status" : "radio-inline"}
 
     """函数作用：使当前登录的用户只能看到自己权限下的文章"""
 
     def queryset(self):
-        qs = query = Article.objects.all()
         if self.request.user.is_superuser:
-            return qs
-        return qs.filter(author=self.request.user)
+            return Article.objects.all()
+        return Article.objects.query_by_user(self.request.user.id)
 
     def save_models(self):
         # self.new_obj.area_company = C.objects.get(user=self.request.user)
         self.new_obj.slug = CommonUtil.cn_to_pinyin(self.new_obj.title)
         article = Article()
         #article.content = self.new_obj.
-        label_ids = self.get_label_id(self.form_obj.data["label"])
-        article.content = self.new_obj.content
-        article.column = self.new_obj.column
-        article.title = self.new_obj.title
-        article.author = self.new_obj.author
-        article.publish_status = self.new_obj.publish_status
-        article.save()
-        article.label.set(label_ids)
-        article.save()
+        label_ids = self.get_label_id(self.form_obj.cleaned_data["label"])
+        #self.new_obj.label.set(None)
+        # article.content = self.new_obj.content
+        # article.column = self.new_obj.column
+        # article.title = self.new_obj.title
+        # article.author = self.new_obj.author
+        # article.publish_status = self.new_obj.publish_status
+        #created_article = Article.objects.create(content= self.new_obj.content, column=self.new_obj.column, title= self.new_obj.title, author=self.new_obj.author, publish_status=self.new_obj.publish_status)
         #super().save_models()
-        #self.new_obj.label.entry_set.add(label_ids)
+        #for label in label_ids:
+        #    created_article.label.add(label)
+        #created_article.save()
+        #article.save()
         #super().save_models()
+        self.form_obj.cleaned_data["label"] = label_ids
+        self.new_obj.save()
+        self.new_obj.label.set(label_ids)
+        #super().save_models()
+        #self.new_obj.save()
+
+    def get_field_attrs(self, db_field, **kwargs):
+       return super().get_field_attrs(db_field, **kwargs)
 
     def get_label_id(self, label_names):
         label_names = label_names.replace('，', ',').replace(' ', ',');
         label_names_list = label_names.split(',')
-        label_ids = []
+        labels = []
         for name in label_names_list:
             name = name.strip()
             if len(name) > 0:
-                Label.objects.get_or_create(name=name, slug=CommonUtil.cn_to_pinyin(name))
+                temp_result = Label.objects.get_or_create(name=name, slug=CommonUtil.cn_to_pinyin(name), intro= name)
                 # label_ids.append(get_Or_create_result[0].id)
-        return Label.objects.filter(name__in=label_names_list)
+                labels.append(temp_result[0].id)
+        return labels
 
 
 class BaseSetting(object):
     enable_themes = True
+
     use_bootswatch = True
 
 

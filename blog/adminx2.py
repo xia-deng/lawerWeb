@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 import xadmin
 from xadmin import views
-from .models1 import IDC, Host, MaintainLog, HostGroup, AccessRecord
+from .models import IDC, Host, MaintainLog, HostGroup, AccessRecord
 from xadmin.layout import Main, TabHolder, Tab, Fieldset, Row, Col, AppendedText, Side
 from xadmin.plugins.inline import Inline
 from xadmin.plugins.batch import BatchChangeAction
@@ -71,7 +71,7 @@ class HostAdmin(object):
 
     list_display = (
         "name", "idc", "guarantee_date", "service_type", "status", "open_web",
-        "description", "ip",
+        "description", "ip", "system"
     )
     list_display_links = ("name",)
 
@@ -98,7 +98,7 @@ class HostAdmin(object):
 
     show_detail_fields = ("idc",)
     list_editable = (
-        "name", "idc", "guarantee_date", "service_type", "description", "ip"
+        "name", "idc", "guarantee_date", "service_type", "description", "ip", "system"
     )
     save_as = True
 

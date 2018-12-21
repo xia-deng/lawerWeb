@@ -2,7 +2,7 @@ from django import forms
 
 from blog.forms import ArticleSelectWidget
 from blog.forms.ArticleSelectWidget import ArticleLabelSelectWidgt
-from blog.models import  Label
+from blog.models import Label, Article
 
 
 class ArticleForm(forms.ModelForm):
@@ -22,5 +22,5 @@ class ArticleForm(forms.ModelForm):
         #self.fields['address'].required = False
 
     class Meta:
-        forms.model = Label
+        forms.model = Article
         fields = '__all__'

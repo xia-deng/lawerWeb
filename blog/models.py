@@ -4,7 +4,7 @@ from django.db import models
 from django.db.models.fields import CharField
 from django.utils.html import format_html
 
-from blog import STATUS_CHOICES, Column_CN, Lable_CN, Article_CN
+from blog import STATUS_CHOICES, Column_CN, Lable_CN, Article_CN, OPERATION_CHOICES
 from froala_editor.fields import FroalaField
 from lawerWeb.settings import IS_POLL_NUM_EDIT, IS_COMMENT_NUM_EDIT
 from utils.file import FileUtil
@@ -83,10 +83,11 @@ class Article(models.Model):
     #                        default=u'', blank=True, imagePath="uploads/images/",
     #                        toolbars='besttome', filePath='uploads/files/', upload_settings={"imageMaxSize":2048}, settings={}, command=None,)
     content = FroalaField('内容', theme='gray', options={'toolbarInline': False, 'height': 500})
-    publish_status = CharField('状态', max_length=1, choices=STATUS_CHOICES)
+    publish_status = CharField('状态', max_length=1, choices=STATUS_CHOICES, default= STATUS_CHOICES[2][0])
 
     pub_date = models.DateTimeField('发表时间', auto_now_add=True, editable=True)
     update_date = models.DateTimeField('更新时间', auto_now=True, null=True)
+    read_records = models.ForeignKey('Article_Read_Records', default=0, on_delete=models.CASCADE)
     #poll = models.ForeignKey('Poll', verbose_name='点赞数', editable=IS_POLL_NUM_EDIT, on_delete=models.CASCADE)
     #comment = models.ForeignKey('Comment', verbose_name='评论数', editable=IS_COMMENT_NUM_EDIT, on_delete=models.CASCADE)
 
@@ -140,3 +141,11 @@ class Poll(models.Model):
     pub_date = models.DateTimeField(auto_now_add=True, editable=False)
     comment = models.ForeignKey('Comment', verbose_name='评论', on_delete=models.CASCADE)
     article = models.ForeignKey(Article, verbose_name="文章", on_delete=models.CASCADE)
+
+class Article_Read_Records(models.Model):
+    records_count=models.IntegerField('阅读数',default=0)
+
+class Visit(models.Model):
+    ip = models.GenericIPAddressField(verbose_name="IP")
+    record_date = models.DateTimeField('记录时间', auto_now_add=True, editable=True)
+    operation = models.CharField('动作', max_length=1, choices=OPERATION_CHOICES)
